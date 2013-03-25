@@ -121,6 +121,20 @@
     \node at (\initx + \longx/2, \inity + 0.4) {\tlabel};
 }
 % >>>
+% <<< \newhyptask[label]{duree}{machine}{début}
+% TODO Vérifier que le nombre de machines est suffisant
+\newcommand{\newhyptask}[3]{
+    % 1 : Durée de la tâche
+    % 2 : Numéro de machine
+    % 3 : Date de début
+    
+    \pgfmathparse{#3*\unitxpas} \let\initx\pgfmathresult
+    \pgfmathparse{#2-0.9}       \let\inity\pgfmathresult
+    \pgfmathparse{#1*\unitxpas} \let\longx\pgfmathresult
+
+    \draw[dashed] (\initx, \inity) rectangle +(\longx, 0.8);
+}
+% >>>
 %% <<< \newunlabeledresa{duree}{machine}{debut}
 %\newcommand{\newresa}[3]{
 %    % 1 : Durée de la réservation
