@@ -1,5 +1,6 @@
 \ProvidesPackage{scheduling}
 \RequirePackage{tikz}
+\RequirePackage{xargs}
 
 \newcounter{task}
 \newcounter{resa}
@@ -8,26 +9,41 @@
 \newcommand{\tlabel}{nolabel}
 
 % <<< Nombre fixé de machines
-\newenvironment{ordo}[4][12]
+\newenvironmentx{ordo}[5][1=12, 5=a]
 % 1 : Longueur Max en cm
 % 2 : Nbre de machines
 % 3 : Pas en abscisse
 % 4 : xmax
+% 5 : Largeur Max
 {
+
     \setcounter{task}{0}
     \setcounter{resa}{0}
     \setcounter{hole}{0}
     \begin{center}
     \begin{tikzpicture}[>=latex]
+ 
+        % Si la taille de l'ordo est fixée alors on calcule l'épaisseur d'une ligne, sinon on la
+        % fixe à 1
+        \ifthenelse{\equal{#5}{a}}
+        {\pgfmathparse{1} \let\height\pgfmathresult}
+        {\pgfmathparse{#5/#2} \let\height\pgfmathresult}
+ 
+        % Calcul de la longueur d'un pas en abscisse
         \pgfmathparse{#3/#4 * (#1-1)} \let\xpas\pgfmathresult
+        % Calcul du nombre de pas nécessaires pour dépasser la borne
         \pgfmathparse{int(#4/#3)} \let\nbpas\pgfmathresult
+        % Longueur d'un pas unitaire
         \pgfmathparse{\xpas/#3} \let\unitxpas\pgfmathresult
 
+        % Calcul de l'abcisse maximale
         \pgfmathparse{#1-1+\xpas} \let\begx\pgfmathresult
+        % Calcul de l'ordonnée maximale
+        \pgfmathparse{#2*\height} \let\endy\pgfmathresult
         
-        \draw[thick] (\begx,0) -- (0,0) -- (0,#2) -- (\begx,#2);
+        \draw[thick] (\begx,0) -- (0,0) -- (0,\endy) -- (\begx,\endy);
         \draw[thick,dashed] (\begx,0) -- (\begx+\xpas,0);
-        \draw[thick,dashed] (\begx,#2) -- (\begx+\xpas,#2);
+        \draw[thick,dashed] (\begx,\endy) -- (\begx+\xpas,\endy);
 
         \node[below] at (0, 0) {$0$};
 
@@ -36,42 +52,50 @@
             \pgfmathparse{int(\x * #3)} \let\xlabel\pgfmathresult
 
             \node[below] at (\abscisse, 0) {$\xlabel$};
-            \draw[dotted] (\abscisse,0) to (\abscisse,#2);
+            \draw[dotted] (\abscisse,0) to (\abscisse,\endy);
         }
 
         \pgfmathparse{(\nbpas + 1) * \xpas} \let\abscisse\pgfmathresult
         \node[above] at (\abscisse, -0.4) {$\dots$};
 
         \foreach \y in {1,...,#2}{
-            \pgfmathparse{\y - 0.5} \let\ordlabel\pgfmathresult
+            \pgfmathparse{\y * \height} \let\ordmachine\pgfmathresult
+            \pgfmathparse{\ordmachine - (0.5*\height)} \let\ordlabel\pgfmathresult
 
             \node[left] at (0, \ordlabel) {$M_\y$};
-            \draw[dotted] (0, \y) to (\begx + \xpas, \y);
+            \draw[dotted] (0, \ordmachine) to (\begx + \xpas, \ordmachine);
         }
 }
 {\end{tikzpicture}\end{center}}
 % >>>
 % <<< k machines k non fixé
-\newenvironment{ordok}[4][12]
+\newenvironmentx{ordok}[5][1=12, 5=a]
 % 1 : Max
 % 2 : Nbre de machines avant ...
 % 3 : Pas en abscisse
 % 4 : xmax
+% 5 : Largeur max
 {
     \setcounter{task}{0}
     \setcounter{resa}{0}
     \setcounter{hole}{0}
     \begin{center}
     \begin{tikzpicture}[>=latex]
+        \ifthenelse{\equal{#5}{a}}
+        {\pgfmathparse{1} \let\height\pgfmathresult}
+        {\pgfmathparse{#5/#2} \let\height\pgfmathresult}
+ 
         \pgfmathparse{#3/#4 * #1} \let\xpas\pgfmathresult
         \pgfmathparse{int(#4/#3)} \let\nbpas\pgfmathresult
         \pgfmathparse{\xpas/#3} \let\unitxpas\pgfmathresult
         
         \pgfmathparse{#1-1+\xpas} \let\begx\pgfmathresult
+        \pgfmathparse{#2*\height} \let\machheight\pgfmathresult
+        \pgfmathparse{\machheight + 2*\height} \let\endy\pgfmathresult
 
-        \draw[thick] (\begx+\xpas,0) -- (0,0) -- (0,#2+2) -- (\begx+\xpas,#2+2);
+        \draw[thick] (\begx+\xpas,0) -- (0,0) -- (0,\endy) -- (\begx+\xpas,\endy);
         \draw[thick,dashed] (\begx,0) -- (\begx+\xpas,0);
-        \draw[thick,dashed] (\begx,#2+2) -- (\begx+\xpas,#2+2);
+        \draw[thick,dashed] (\begx,\endy) -- (\begx+\xpas,\endy);
 
         \node[below] at (0, 0) {$0$};
 
@@ -80,23 +104,27 @@
             \pgfmathparse{int(\x * #3)} \let\xlabel\pgfmathresult
 
             \node[below] at (\abscisse, 0) {$\xlabel$};
-            \draw[dotted] (\abscisse,0) to (\abscisse,#2);
-            \draw[dotted] (\abscisse,#2+1) to (\abscisse,#2+2);
+            \draw[dotted] (\abscisse,0) to (\abscisse,\machheight);
+            \draw[dotted] (\abscisse,\machheight+1) to (\abscisse,\endy);
         }
 
         \pgfmathparse{(\nbpas + 1) * \xpas} \let\abscisse\pgfmathresult
         \node[above] at (\abscisse, -0.4) {$\dots$};
 
         \foreach \y in {1,...,#2}{
-            \pgfmathparse{\y - 0.5} \let\ordlabel\pgfmathresult
+            \pgfmathparse{\y * \height} \let\ordmachine\pgfmathresult
+            \pgfmathparse{\ordmachine - (0.5*\height)} \let\ordlabel\pgfmathresult
 
             \node[left] at (0, \ordlabel) {$M_\y$};
-            \draw[dotted] (0, \y) to (\begx+\xpas, \y);
+            \draw[dotted] (0, \ordmachine) to (\begx + \xpas, \ordmachine);
         }
 
-        \node[left] at (0, #2 + 0.6) {$\vdots$};
-        \node[left] at (0, #2 + 1.5) {$k$};
-        \draw[dotted]  (0, #2 + 1) to (\begx+\xpas, #2 + 1);
+        \pgfmathparse{\height*0.6}\let\temporaryvariable\pgfmathresult
+        \node[left] at (0, \machheight + \temporaryvariable) {$\vdots$};
+        \pgfmathparse{\endy - 0.5*\height}\let\temporaryvariable\pgfmathresult
+        \node[left] at (0, \temporaryvariable) {$k$};
+        \pgfmathparse{\endy - \height}\let\temporaryvariable\pgfmathresult
+        \draw[dotted]  (0, \temporaryvariable) to (\begx+\xpas, #2 + 1);
 }
 {\end{tikzpicture}\end{center}}
 % >>>
@@ -114,11 +142,12 @@
     {\renewcommand{\tlabel}{#1}}
 
     \pgfmathparse{#4*\unitxpas} \let\initx\pgfmathresult
-    \pgfmathparse{#3-0.9}       \let\inity\pgfmathresult
+    \pgfmathparse{(#3*\height)-(0.9*\height)}       \let\inity\pgfmathresult
     \pgfmathparse{#2*\unitxpas} \let\longx\pgfmathresult
+    \pgfmathparse{\height*0.8}  \let\largy\pgfmathresult
 
-    \fill[black!30] (\initx, \inity) rectangle +(\longx, 0.8);
-    \node at (\initx + \longx/2, \inity + 0.4) {\tlabel};
+    \fill[black!30] (\initx, \inity) rectangle +(\longx, \largy);
+    \node at (\initx + \longx/2, \inity + \largy/2) {\tlabel};
 }
 % >>>
 % <<< \newhyptask[label]{duree}{machine}{début}
@@ -129,10 +158,11 @@
     % 3 : Date de début
     
     \pgfmathparse{#3*\unitxpas} \let\initx\pgfmathresult
-    \pgfmathparse{#2-0.9}       \let\inity\pgfmathresult
+    \pgfmathparse{(#2-0.9)*\height)}       \let\inity\pgfmathresult
     \pgfmathparse{#1*\unitxpas} \let\longx\pgfmathresult
+    \pgfmathparse{\height*0.8}  \let\largy\pgfmathresult
 
-    \draw[dashed] (\initx, \inity) rectangle +(\longx, 0.8);
+    \draw[dashed] (\initx, \inity) rectangle +(\longx, \largy);
 }
 % >>>
 %% <<< \newunlabeledresa{duree}{machine}{debut}
@@ -143,11 +173,12 @@
 %    \pgfmathparse{#3*\unitxpas} \let\initx\pgfmathresult
 %    \pgfmathparse{#2-0.9}       \let\inity\pgfmathresult
 %    \pgfmathparse{#1*\unitxpas} \let\longx\pgfmathresult
+    %\pgfmathparse{\height*0.8}  \let\largy\pgfmathresult
 %
-%    \fill[black] (\initx, \inity) rectangle +(\longx, 0.8);
+%    \fill[black] (\initx, \inity) rectangle +(\longx, \largy);
 %}
 %% >>>
-% <<< \newlabeledresa[label]{duree}{machine}{debut}
+% <<< \newresa[label]{duree}{machine}{debut}
 \newcommand{\newresa}[4][n]{
     % 1 : Label de la réservation
     % 2 : Durée de la réservation
@@ -160,11 +191,12 @@
     {\renewcommand{\tlabel}{#1}}
 
     \pgfmathparse{#4*\unitxpas} \let\initx\pgfmathresult
-    \pgfmathparse{#3-0.9}       \let\inity\pgfmathresult
+    \pgfmathparse{(#3*\height)-(0.9*\height)}       \let\inity\pgfmathresult
     \pgfmathparse{#2*\unitxpas} \let\longx\pgfmathresult
+    \pgfmathparse{\height*0.8}  \let\largy\pgfmathresult
 
-    \fill[black] (\initx, \inity) rectangle +(\longx, 0.8);
-    \node[white] at (\initx + \longx/2, \inity + 0.4) {\tlabel};
+    \fill[black] (\initx, \inity) rectangle +(\longx, \largy);
+    \node[white] at (\initx + \longx/2, \inity + \largy/2) {\tlabel};
 }
 % >>>
 % <<< \newhole[label]{duree}{machine}{debut}
@@ -180,10 +212,11 @@
     {\renewcommand{\tlabel}{#1}}
 
     \pgfmathparse{#4*\unitxpas} \let\initx\pgfmathresult
-    \pgfmathparse{#3-0.7}       \let\inity\pgfmathresult
+    \pgfmathparse{(#3*\height)-(0.8*\height)}       \let\inity\pgfmathresult
     \pgfmathparse{#2*\unitxpas} \let\longx\pgfmathresult
 
-    \draw[<->] (\initx, \inity) to node[above] {\tlabel} (\initx + \longx, \inity);
+    \node at (\initx + \longx/2, \inity + 0.35*\height) {\tlabel};
+    \draw[<->] (\initx, \inity) to (\initx + \longx, \inity);
 }
 % >>>
 % <<< \newbeghole[label]{duree}{machine}
@@ -198,10 +231,11 @@
     {\renewcommand{\tlabel}{#1}}
 
     \pgfmathparse{0*\unitxpas} \let\initx\pgfmathresult
-    \pgfmathparse{#3-0.7}       \let\inity\pgfmathresult
+    \pgfmathparse{(#3*\height)-(0.8*\height)}       \let\inity\pgfmathresult
     \pgfmathparse{#2*\unitxpas} \let\longx\pgfmathresult
 
-    \draw[->] (\initx, \inity) to node[above] {\tlabel} (\initx + \longx, \inity);
+    \node at (\initx + \longx/2, \inity + 0.35*\height) {\tlabel};
+    \draw[->] (\initx, \inity) to (\initx + \longx, \inity);
     \draw[-,dashed] (\initx - 1, \inity) to (\initx, \inity);
 }
 % >>>
@@ -218,17 +252,19 @@
     {\renewcommand{\tlabel}{#1}}
 
     \pgfmathparse{#4*\unitxpas} \let\initx\pgfmathresult
-    \pgfmathparse{#3-0.7}       \let\inity\pgfmathresult
+    \pgfmathparse{(#3*\height)-(0.8*\height)}       \let\inity\pgfmathresult
     \pgfmathparse{#2*\unitxpas} \let\longx\pgfmathresult
 
-    \draw[<-] (\initx, \inity) to node[above] {\tlabel} (\initx + \longx, \inity);
+    
+    \node at (\initx + \longx/2, \inity + 0.35*\height) {\tlabel};
+    \draw[<-] (\initx, \inity) to (\initx + \longx, \inity);
     \draw[-,dashed] (\initx + \longx, \inity) to (\initx + \longx + 2*\unitxpas, \inity);
 }
 % >>>
 % <<< \adjust{nbmachine}{debmachine}
 \newcommand{\adjust}[2]{
-    \pgfmathparse{#1-0.2}       \let\longy\pgfmathresult
-    \pgfmathparse{#2-0.9}       \let\inity\pgfmathresult
+    \pgfmathparse{(#1-0.2)*\height}       \let\longy\pgfmathresult
+    \pgfmathparse{(#2-0.9)*\height}       \let\inity\pgfmathresult
 
     \fill[black!0] (0, \inity) rectangle +(1, \longy);
 }
