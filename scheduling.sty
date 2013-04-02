@@ -8,13 +8,15 @@
 
 \newcommand{\tlabel}{nolabel}
 
-% <<< Nombre fixé de machines
-\newenvironmentx{ordo}[5][1=12, 5=a]
+% <<< Nombre fixé de machines (initialisation des abscisses à 0)
+\newenvironmentx{ordo}[7][1=12, 5=a, 6=0, 7=0]
 % 1 : Longueur Max en cm
 % 2 : Nbre de machines
 % 3 : Pas en abscisse
 % 4 : xmax
 % 5 : Largeur Max
+% 6 : Début de la numérotation des machines
+% 7 : Début de la numérotation en abscisse
 {
 
     \setcounter{task}{0}
@@ -45,13 +47,20 @@
         \draw[thick,dashed] (\begx,0) -- (\begx+\xpas,0);
         \draw[thick,dashed] (\begx,\endy) -- (\begx+\xpas,\endy);
 
-        \node[below] at (0, 0) {$0$};
+        \node[below] at (0, 0) {$#7$};
 
         \foreach \x in {1,...,\nbpas}{
             \pgfmathparse{\x * \xpas} \let\abscisse\pgfmathresult
             \pgfmathparse{int(\x * #3)} \let\xlabel\pgfmathresult
 
-            \node[below] at (\abscisse, 0) {$\xlabel$};
+            % TODO Faire le test est un nombre
+            \IfDecimal{#7}
+            {
+                \pgfmathparse{int(\xlabel + #7)} \let\supxlab\pgfmathresult
+                \node[below] at (\abscisse, 0) {$\supxlab$};
+            }
+            {\node[below] at (\abscisse, 0) {$#7 + \xlabel$};}
+
             \draw[dotted] (\abscisse,0) to (\abscisse,\endy);
         }
 
@@ -62,7 +71,18 @@
             \pgfmathparse{\y * \height} \let\ordmachine\pgfmathresult
             \pgfmathparse{\ordmachine - (0.5*\height)} \let\ordlabel\pgfmathresult
 
-            \node[left] at (0, \ordlabel) {$M_\y$};
+            \ifthenelse{\equal{\y}{1}}
+            {\node[left] at (0, \ordlabel) {$M_{#6}$};}
+            {
+                \pgfmathparse{int(\y - 1)} \let\ylabel\pgfmathresult
+                % TODO Tester s'il s'agit d'un entier
+                \IfDecimal{#6}
+                {
+                    \pgfmathparse{int(#6 + \ylabel)} \let\ysuplabel\pgfmathresult
+                    \node[left] at (0, \ordlabel) {$M_{\ysuplabel}$};
+                }
+                {\node[left] at (0, \ordlabel) {$M_{#6 + \ylabel}$};}
+            }
             \draw[dotted] (0, \ordmachine) to (\begx + \xpas, \ordmachine);
         }
 }
@@ -268,6 +288,7 @@
 
     \fill[black!0] (0, \inity) rectangle +(1, \longy);
 }
+% >>>
 
 
 % <<< Taches
@@ -309,4 +330,12 @@
 \newcommand{\cint}[1]{ c_{#1} }
 %% Durée d'un intervalle
 \newcommand{\pint}[1]{ l_{#1} }
+% >>>
+
+% <<< Notations
+\newcommand{\authmach}[1]{$#1$-\emph{disponible}}
+\newcommand{\tphase}[0]{phase}
+\newcommand{\nbphase}[0]{I_{max}^{\mathcal{T}}}
+\newcommand{\nbevphase}[0]{I_{max}^{\mathcal{E}}}
+\newcommand{\iephase}[1]{\mathcal{T}^{#1}}
 % >>>
