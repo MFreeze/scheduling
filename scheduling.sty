@@ -5,11 +5,12 @@
 \newcounter{task}
 \newcounter{resa}
 \newcounter{hole}
+\newcounter{phase}
 
 \newcommand{\tlabel}{nolabel}
 
 % <<< Nombre fixé de machines (initialisation des abscisses à 0)
-\newenvironmentx{ordo}[7][1=12, 5=a, 6=0, 7=0]
+\newenvironmentx{ordo}[8][1=12, 5=a, 6=0, 7=0, 8=1, usedefault]
 % 1 : Longueur Max en cm
 % 2 : Nbre de machines
 % 3 : Pas en abscisse
@@ -18,12 +19,12 @@
 % 6 : Début de la numérotation des machines
 % 7 : Début de la numérotation en abscisse
 {
-
     \setcounter{task}{0}
     \setcounter{resa}{0}
     \setcounter{hole}{0}
+    \setcounter{phase}{0}
     \begin{center}
-    \begin{tikzpicture}[>=latex]
+        \begin{tikzpicture}[>=latex,every node/.style={transform shape}, scale=#8]
  
         % Si la taille de l'ordo est fixée alors on calcule l'épaisseur d'une ligne, sinon on la
         % fixe à 1
@@ -32,14 +33,14 @@
         {\pgfmathparse{#5/#2} \let\height\pgfmathresult}
  
         % Calcul de la longueur d'un pas en abscisse
-        \pgfmathparse{#3/#4 * (#1-1)} \let\xpas\pgfmathresult
+        \pgfmathparse{#3/(#4) * (#1-1)} \let\xpas\pgfmathresult
         % Calcul du nombre de pas nécessaires pour dépasser la borne
-        \pgfmathparse{int(#4/#3)} \let\nbpas\pgfmathresult
+        \pgfmathparse{int((#4 - 1)/#3) + 1} \let\nbpas\pgfmathresult
         % Longueur d'un pas unitaire
         \pgfmathparse{\xpas/#3} \let\unitxpas\pgfmathresult
 
         % Calcul de l'abcisse maximale
-        \pgfmathparse{#1-1+\xpas} \let\begx\pgfmathresult
+        \pgfmathparse{#1-\xpas} \let\begx\pgfmathresult
         % Calcul de l'ordonnée maximale
         \pgfmathparse{#2*\height} \let\endy\pgfmathresult
         
@@ -64,7 +65,7 @@
             \draw[dotted] (\abscisse,0) to (\abscisse,\endy);
         }
 
-        \pgfmathparse{(\nbpas + 1) * \xpas} \let\abscisse\pgfmathresult
+        \pgfmathparse{(\nbpas + 0.7) * \xpas} \let\abscisse\pgfmathresult
         \node[above] at (\abscisse, -0.4) {$\dots$};
 
         \foreach \y in {1,...,#2}{
@@ -89,7 +90,15 @@
 {\end{tikzpicture}\end{center}}
 % >>>
 % <<< k machines k non fixé
-\newenvironmentx{ordok}[5][1=12, 5=a]
+%\newenvironmentx{ordo}[7][1=12, 5=a, 6=0, 7=0]
+% 1 : Longueur Max en cm
+% 2 : Nbre de machines
+% 3 : Pas en abscisse
+% 4 : xmax
+% 5 : Largeur Max
+% 6 : Début de la numérotation des machines
+% 7 : Début de la numérotation en abscisse
+\newenvironmentx{ordok}[7][1=12, 5=a, 6=0, 7=0]
 % 1 : Max
 % 2 : Nbre de machines avant ...
 % 3 : Pas en abscisse
@@ -99,17 +108,18 @@
     \setcounter{task}{0}
     \setcounter{resa}{0}
     \setcounter{hole}{0}
+    \setcounter{phase}{0}
     \begin{center}
     \begin{tikzpicture}[>=latex]
         \ifthenelse{\equal{#5}{a}}
         {\pgfmathparse{1} \let\height\pgfmathresult}
         {\pgfmathparse{#5/#2} \let\height\pgfmathresult}
  
-        \pgfmathparse{#3/#4 * #1} \let\xpas\pgfmathresult
-        \pgfmathparse{int(#4/#3)} \let\nbpas\pgfmathresult
+        \pgfmathparse{#3/(#4) * (#1-1)} \let\xpas\pgfmathresult
+        \pgfmathparse{int((#4 - 1)/#3) + 1} \let\nbpas\pgfmathresult
         \pgfmathparse{\xpas/#3} \let\unitxpas\pgfmathresult
         
-        \pgfmathparse{#1-1+\xpas} \let\begx\pgfmathresult
+        \pgfmathparse{#1-\xpas} \let\begx\pgfmathresult
         \pgfmathparse{#2*\height} \let\machheight\pgfmathresult
         \pgfmathparse{\machheight + 2*\height} \let\endy\pgfmathresult
 
@@ -128,7 +138,7 @@
             \draw[dotted] (\abscisse,\machheight+1) to (\abscisse,\endy);
         }
 
-        \pgfmathparse{(\nbpas + 1) * \xpas} \let\abscisse\pgfmathresult
+        \pgfmathparse{(\nbpas + 0.7) * \xpas} \let\abscisse\pgfmathresult
         \node[above] at (\abscisse, -0.4) {$\dots$};
 
         \foreach \y in {1,...,#2}{
@@ -147,6 +157,30 @@
         \draw[dotted]  (0, \temporaryvariable) to (\begx+\xpas, #2 + 1);
 }
 {\end{tikzpicture}\end{center}}
+% >>>
+% <<< \newphase[label]{duree}{machine}{début}
+% TODO Vérifier que le nombre de machines est suffisant
+\newcommand{\newphase}[4][n]{
+    % 1 : Label de la tâche
+    % 2 : Durée de la tâche
+    % 3 : Numéro de machine
+    % 4 : Date de début
+    
+    \ifthenelse{\equal{#1}{n}}
+    {\addtocounter{phase}{1}
+    \renewcommand{\tlabel}{$\iephase{\thephase}$}}
+    {\renewcommand{\tlabel}{#1}}
+
+    \pgfmathparse{#4*\unitxpas} \let\initx\pgfmathresult
+    \pgfmathparse{(#3*\height)-(0.9*\height)}       \let\inity\pgfmathresult
+    \pgfmathparse{#2*\unitxpas} \let\longx\pgfmathresult
+    \pgfmathparse{\height*0.8}  \let\largy\pgfmathresult
+
+    %\fill[black!30] (\initx, \inity) rectangle +(\longx, \largy);
+    \draw[-, dashed] (\initx, 0) to (\initx, \inity + \largy);
+    \draw[-, dashed] (\initx + \longx, 0) to (\initx + \longx, \inity + \largy);
+    \node at (\initx + \longx/2, \inity + \largy/2) {\tlabel};
+}
 % >>>
 % <<< \newtask[label]{duree}{machine}{début}
 % TODO Vérifier que le nombre de machines est suffisant
@@ -185,7 +219,7 @@
     \draw[dashed] (\initx, \inity) rectangle +(\longx, \largy);
 }
 % >>>
-%% <<< \newunlabeledresa{duree}{machine}{debut}
+% <<< \newunlabeledresa{duree}{machine}{debut}
 %\newcommand{\newresa}[3]{
 %    % 1 : Durée de la réservation
 %    % 2 : Numéro de machine
@@ -287,6 +321,21 @@
     \pgfmathparse{(#2-0.9)*\height}       \let\inity\pgfmathresult
 
     \fill[black!0] (0, \inity) rectangle +(1, \longy);
+}
+% >>>
+% <<< \newline[color]{time}{label}{height}
+\newcommand{\newtline}[4][black]{
+    % 1 : Label de la tâche
+    % 2 : Durée de la tâche
+    % 3 : Numéro de machine
+    % 4 : Date de début
+    
+    \pgfmathparse{#2*\unitxpas} \let\initx\pgfmathresult
+    \pgfmathparse{(#4*\height)}       \let\inity\pgfmathresult
+
+    %\fill[black!30] (\initx, \inity) rectangle +(\longx, \largy);
+    \draw[-, thick, dashed, #1] (\initx, 0) to (\initx, \inity);
+    \node[#1] at (\initx, \inity + 0.6*\height) {#3};
 }
 % >>>
 
