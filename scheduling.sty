@@ -10,7 +10,7 @@
 \newcommand{\tlabel}{nolabel}
 
 % <<< Nombre fixé de machines (initialisation des abscisses à 0)
-\newenvironmentx{ordo}[8][1=12, 5=a, 6=0, 7=0, 8=1, usedefault]
+\newenvironmentx{ordo}[9][1=12, 5=a, 6=0, 7=0, 8=1, 9=n, usedefault]
 % 1 : Longueur Max en cm
 % 2 : Nbre de machines
 % 3 : Pas en abscisse
@@ -23,71 +23,77 @@
     \setcounter{resa}{0}
     \setcounter{hole}{0}
     \setcounter{phase}{0}
-    \begin{center}
-        \begin{tikzpicture}[>=latex,every node/.style={transform shape}, scale=#8]
+    \begin{tikzpicture}[>=latex,every node/.style={transform shape}, scale=#8]
  
-        % Si la taille de l'ordo est fixée alors on calcule l'épaisseur d'une ligne, sinon on la
-        % fixe à 1
-        \ifthenelse{\equal{#5}{a}}
-        {\pgfmathparse{1} \let\height\pgfmathresult}
-        {\pgfmathparse{#5/#2} \let\height\pgfmathresult}
+    % Si la taille de l'ordo est fixée alors on calcule l'épaisseur d'une ligne, sinon on la
+    % fixe à 1
+    \ifthenelse{\equal{#5}{a}}
+    {\pgfmathparse{1} \let\height\pgfmathresult}
+    {\pgfmathparse{#5/#2} \let\height\pgfmathresult}
+
+    \ifthenelse{\equal{#9}{n}}
+    {\pgfmathparse{0} \let\contour\pgfmathresult}
+    {\pgfmathparse{1} \let\contour\pgfmathresult}
  
-        % Calcul de la longueur d'un pas en abscisse
-        \pgfmathparse{#3/(#4) * (#1-1)} \let\xpas\pgfmathresult
-        % Calcul du nombre de pas nécessaires pour dépasser la borne
-        \pgfmathparse{int((#4 - 1)/#3) + 1} \let\nbpas\pgfmathresult
-        % Longueur d'un pas unitaire
-        \pgfmathparse{\xpas/#3} \let\unitxpas\pgfmathresult
+    % Calcul de la longueur d'un pas en abscisse
+    \pgfmathparse{#3/(#4) * (#1-1)} \let\xpas\pgfmathresult
+    % Calcul du nombre de pas nécessaires pour dépasser la borne
+    \pgfmathparse{int((#4 - 1)/#3) + 1} \let\nbpas\pgfmathresult
+    % Longueur d'un pas unitaire
+    \pgfmathparse{\xpas/#3} \let\unitxpas\pgfmathresult
 
-        % Calcul de l'abcisse maximale
-        \pgfmathparse{#1-\xpas} \let\begx\pgfmathresult
-        % Calcul de l'ordonnée maximale
-        \pgfmathparse{#2*\height} \let\endy\pgfmathresult
-        
-        \draw[thick] (\begx,0) -- (0,0) -- (0,\endy) -- (\begx,\endy);
-        \draw[thick,dashed] (\begx,0) -- (\begx+\xpas,0);
-        \draw[thick,dashed] (\begx,\endy) -- (\begx+\xpas,\endy);
+    % Calcul de l'abcisse maximale
+    \pgfmathparse{#1-\xpas} \let\begx\pgfmathresult
+    % Calcul de l'ordonnée maximale
+    \pgfmathparse{#2*\height} \let\endy\pgfmathresult
+    
+    \draw[thick] (\begx,0) -- (0,0) -- (0,\endy) -- (\begx,\endy);
+    \draw[thick,dashed] (\begx,0) -- (\begx+\xpas,0);
+    \draw[thick,dashed] (\begx,\endy) -- (\begx+\xpas,\endy);
 
-        \node[below] at (0, 0) {$#7$};
+    \draw[thick,dashed] (0,0) -- (0-\xpas,0);
+    \draw[thick,dashed] (0,\endy) -- (0-\xpas,\endy);
 
-        \foreach \x in {1,...,\nbpas}{
-            \pgfmathparse{\x * \xpas} \let\abscisse\pgfmathresult
-            \pgfmathparse{int(\x * #3)} \let\xlabel\pgfmathresult
+    \node[below] at (0, 0) {$#7$};
 
-            % TODO Faire le test est un nombre
-            \IfDecimal{#7}
-            {
-                \pgfmathparse{int(\xlabel + #7)} \let\supxlab\pgfmathresult
-                \node[below] at (\abscisse, 0) {$\supxlab$};
-            }
-            {\node[below] at (\abscisse, 0) {$#7 + \xlabel$};}
+    \foreach \x in {1,...,\nbpas}{
+        \pgfmathparse{\x * \xpas} \let\abscisse\pgfmathresult
+        \pgfmathparse{int(\x * #3)} \let\xlabel\pgfmathresult
 
-            \draw[dotted] (\abscisse,0) to (\abscisse,\endy);
+        % TODO Faire le test est un nombre
+        \IfDecimal{#7}
+        {
+            \pgfmathparse{int(\xlabel + #7)} \let\supxlab\pgfmathresult
+            \node[below] at (\abscisse, 0) {$\supxlab$};
         }
+        {\node[below] at (\abscisse, 0) {$#7 + \xlabel$};}
 
-        \pgfmathparse{(\nbpas + 0.7) * \xpas} \let\abscisse\pgfmathresult
-        \node[above] at (\abscisse, -0.4) {$\dots$};
+        \draw[dotted] (\abscisse,0) to (\abscisse,\endy);
+    }
 
-        \foreach \y in {1,...,#2}{
-            \pgfmathparse{\y * \height} \let\ordmachine\pgfmathresult
-            \pgfmathparse{\ordmachine - (0.5*\height)} \let\ordlabel\pgfmathresult
+    \pgfmathparse{(\nbpas + 0.7) * \xpas} \let\abscisse\pgfmathresult
+    \node[above] at (\abscisse, -0.4) {$\dots$};
 
-            \ifthenelse{\equal{\y}{1}}
-            {\node[left] at (0, \ordlabel) {$M_{#6}$};}
+    \foreach \y in {1,...,#2}{
+        \pgfmathparse{\y * \height} \let\ordmachine\pgfmathresult
+        \pgfmathparse{\ordmachine - (0.5*\height)} \let\ordlabel\pgfmathresult
+
+        \ifthenelse{\equal{\y}{1}}
+        {\node[left] at (0, \ordlabel) {$M_{#6}$};}
+        {
+            \pgfmathparse{int(\y - 1)} \let\ylabel\pgfmathresult
+            % TODO Tester s'il s'agit d'un entier
+            \IfDecimal{#6}
             {
-                \pgfmathparse{int(\y - 1)} \let\ylabel\pgfmathresult
-                % TODO Tester s'il s'agit d'un entier
-                \IfDecimal{#6}
-                {
-                    \pgfmathparse{int(#6 + \ylabel)} \let\ysuplabel\pgfmathresult
-                    \node[left] at (0, \ordlabel) {$M_{\ysuplabel}$};
-                }
-                {\node[left] at (0, \ordlabel) {$M_{#6 + \ylabel}$};}
+                \pgfmathparse{int(#6 + \ylabel)} \let\ysuplabel\pgfmathresult
+                \node[left] at (0, \ordlabel) {$M_{\ysuplabel}$};
             }
-            \draw[dotted] (0, \ordmachine) to (\begx + \xpas, \ordmachine);
+            {\node[left] at (0, \ordlabel) {$M_{#6 + \ylabel}$};}
         }
+        \draw[dotted] (0, \ordmachine) to (\begx + \xpas, \ordmachine);
+    }
 }
-{\end{tikzpicture}\end{center}}
+{\end{tikzpicture}}
 % >>>
 % <<< k machines k non fixé
 %\newenvironmentx{ordo}[7][1=12, 5=a, 6=0, 7=0]
@@ -184,11 +190,12 @@
 % >>>
 % <<< \newtask[label]{duree}{machine}{début}
 % TODO Vérifier que le nombre de machines est suffisant
-\newcommand{\newtask}[4][n]{
+\newcommandx{\newtask}[6][1=n,5=black!30, 6=black, usedefault]{
     % 1 : Label de la tâche
     % 2 : Durée de la tâche
     % 3 : Numéro de machine
     % 4 : Date de début
+    % 5 : Couleur
     
     \ifthenelse{\equal{#1}{n}}
     {\addtocounter{task}{1}
@@ -200,8 +207,11 @@
     \pgfmathparse{#2*\unitxpas} \let\longx\pgfmathresult
     \pgfmathparse{\height*0.8}  \let\largy\pgfmathresult
 
-    \fill[black!30] (\initx, \inity) rectangle +(\longx, \largy);
-    \node at (\initx + \longx/2, \inity + \largy/2) {\tlabel};
+    \fill[#5] (\initx, \inity) rectangle +(\longx, \largy);
+    \ifthenelse{\equal{\contour}{1}}{
+        \draw[#6] (\initx, \inity) rectangle +(\longx, \largy);
+    }{}
+    \node[#6] at (\initx + \longx/2, \inity + \largy/2) {\tlabel};
 }
 % >>>
 % <<< \newhyptask[label]{duree}{machine}{début}
@@ -233,7 +243,7 @@
 %}
 %% >>>
 % <<< \newresa[label]{duree}{machine}{debut}
-\newcommand{\newresa}[4][n]{
+\newcommandx{\newresa}[6][1=n, 5=black, 6=white, usedefault]{
     % 1 : Label de la réservation
     % 2 : Durée de la réservation
     % 3 : Numéro de machine
@@ -249,8 +259,11 @@
     \pgfmathparse{#2*\unitxpas} \let\longx\pgfmathresult
     \pgfmathparse{\height*0.8}  \let\largy\pgfmathresult
 
-    \fill[black] (\initx, \inity) rectangle +(\longx, \largy);
-    \node[white] at (\initx + \longx/2, \inity + \largy/2) {\tlabel};
+    \fill[#5] (\initx, \inity) rectangle +(\longx, \largy);
+    \ifthenelse{\equal{\contour}{1}}{
+        \draw[#6] (\initx, \inity) rectangle +(\longx, \largy);
+    }{}
+    \node[#6] at (\initx + \longx/2, \inity + \largy/2) {\tlabel};
 }
 % >>>
 % <<< \newhole[label]{duree}{machine}{debut}
@@ -262,7 +275,7 @@
     
     \ifthenelse{\equal{#1}{n}}
     {\addtocounter{hole}{1}
-    \renewcommand{\tlabel}{$h_{\thehole}$}}
+    \renewcommand{\tlabel}{$H_{\thehole}$}}
     {\renewcommand{\tlabel}{#1}}
 
     \pgfmathparse{#4*\unitxpas} \let\initx\pgfmathresult
@@ -281,7 +294,7 @@
     
     \ifthenelse{\equal{#1}{n}}
     {\addtocounter{hole}{1}
-    \renewcommand{\tlabel}{$h_{\thehole}$}}
+    \renewcommand{\tlabel}{$H_{\thehole}$}}
     {\renewcommand{\tlabel}{#1}}
 
     \pgfmathparse{0*\unitxpas} \let\initx\pgfmathresult
@@ -302,7 +315,7 @@
     
     \ifthenelse{\equal{#1}{n}}
     {\addtocounter{hole}{1}
-    \renewcommand{\tlabel}{$h_{\thehole}$}}
+    \renewcommand{\tlabel}{$H_{\thehole}$}}
     {\renewcommand{\tlabel}{#1}}
 
     \pgfmathparse{#4*\unitxpas} \let\initx\pgfmathresult
@@ -342,33 +355,48 @@
 
 % <<< Taches
 %% Début d'une tâche
-\newcommand{\st}[1]{ r^{\mathcal{T}}_{#1} }
+\newcommand{\st}[1]{ r_{#1} }
+\newcommand{\ste}[1]{ r^{\mathcal{T}}_{#1} }
 %% Fin d'une tâche
-\newcommand{\ct}[1]{ \widetilde{d}^{\mathcal{T}}_{#1} }
+\newcommand{\ct}[1]{ d_{#1} }
+\newcommand{\cte}[1]{ d^{\mathcal{T}}_{#1} }
 %% Durée d'une tâche
-\newcommand{\pt}[1]{ p^{\mathcal{T}}_{#1} }
+\newcommand{\pt}[1]{ p_{#1} }
+\newcommand{\pte}[1]{ p^{\mathcal{T}}_{#1} }
 % >>>
 % <<< Resa
 %% Début d'une réservation
-\newcommand{\sres}[1]{ r^{\mathcal{R}}_{#1} }
+\newcommand{\sres}[1]{ r_{#1} }
+\newcommand{\srese}[1]{ r^{\mathcal{R}}_{#1} }
 %% Fin d'une réservation
-\newcommand{\cres}[1]{ \widetilde{d}^{\mathcal{R}}_{#1} }
+\newcommand{\cres}[1]{ d_{#1} }
+\newcommand{\crese}[1]{ d^{\mathcal{R}}_{#1} }
 %% Durée d'une réservation
-\newcommand{\pres}[1]{ p^{\mathcal{R}}_{#1} }
+\newcommand{\pres}[1]{ p_{#1} }
+\newcommand{\prese}[1]{ p^{\mathcal{R}}_{#1} }
+% Machine de la réservation
+\newcommand{\mres}[1]{ M_{#1} }
+\newcommand{\mrese}[1]{ M^{\mathcal{R}}_{#1} }
 % >>>
 % <<< Hole
 %% Début d'un trou
-\newcommand{\sho}[1]{ r^{\mathcal{H}}_{#1} }
+\newcommand{\sho}[1]{ r_{#1} }
+\newcommand{\shoe}[1]{ r^{\mathcal{H}}_{#1} }
 %% Fin d'un trou
-\newcommand{\cho}[1]{ \widetilde{d}^{\mathcal{H}}_{#1} }
+\newcommand{\cho}[1]{ d_{#1} }
+\newcommand{\choe}[1]{ d^{\mathcal{H}}_{#1} }
 %% Durée d'un trou
-\newcommand{\pho}[1]{ p^{\mathcal{H}}_{#1} }
+\newcommand{\pho}[1]{ p_{#1} }
+\newcommand{\phoe}[1]{ p^{\mathcal{H}}_{#1} }
+% Machine du trou
+\newcommand{\mhol}[1]{ M_{#1} }
+\newcommand{\mhole}[1]{ M^{\mathcal{H}}_{#1} }
 % >>>
 % <<< Evénement général
 %% Début d'un événement général (tache ou réservation)
 \newcommand{\sgen}[1]{ r_{#1} }
 %% Fin d'un événement général
-\newcommand{\cgen}[1]{ \widetilde{d}_{#1} }
+\newcommand{\cgen}[1]{ d_{#1} }
 %% Durée d'un événement général
 \newcommand{\pgen}[1]{ p_{#1} }
 % >>>
@@ -384,8 +412,9 @@
 % <<< Notations
 \newcommand{\authmach}[1]{$#1$-\emph{disponible}}
 \newcommand{\tphase}[0]{phase}
-\newcommand{\nbphase}[0]{I_{max}^{\mathcal{E}}}
-\newcommand{\nbevphase}[0]{I_{max}^{\mathcal{E}}}
-\newcommand{\iephase}[1]{\mathcal{E}^{#1}}
+\newcommand{\nbphase}[0]{k}
+\newcommand{\nbevphase}[0]{k}
+\newcommand{\iephase}[1]{\mathcal{P}_{#1}}
 \newcommand{\nbev}[0]{|\mathcal{E}|}
+\newcommandx{\ordpart}[3][2=1]{#1\left[ \iephase{#2}, \iephase{#3} \right]}
 % >>>
