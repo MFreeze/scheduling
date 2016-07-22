@@ -27,6 +27,30 @@
 \newcounter{phase}
 
 \newcommand{\tlabel}{nolabel}
+\newcommand{\ArgI}{M}
+\newcommand{\ArgII}{1}
+
+\newboolean{setabs}
+\setboolean{setabs}{true}
+\newcommand{\toggleonabs}[0]{\setboolean{setabs}{true}}
+\newcommand{\toggleoffabs}[0]{\setboolean{setabs}{false}}
+
+\newboolean{infmachine}
+\setboolean{infmachine}{false}
+\newcommandx{\toggleoninfmach}[1][1=1]{
+    \setboolean{infmachine}{true}
+    \renewcommand{\ArgII}{#1}
+}
+\newcommand{\toggleoffinfmach}[0]{\setboolean{infmachine}{false}}
+
+\newboolean{contour}
+\setboolean{contour}{false}
+\newcommand{\toggleoncontour}[0]{\setboolean{contour}{true}}
+\newcommand{\toggleoffcontour}[0]{\setboolean{contour}{false}}
+
+\newcommandx{\notations}[1][1=M]{
+    \renewcommand{\ArgI}{#1}
+}
 
 % <<< Nombre fixé de machines (initialisation des abscisses à 0)
 \newenvironmentx{ordo}[9][1=12, 5=1, 6=0, 7=0, 8=1, 9=n, usedefault]
@@ -37,6 +61,7 @@
 % 5 : Hauteur d'une ligne
 % 6 : Début de la numérotation des machines
 % 7 : Début de la numérotation en abscisse
+% 8 : Scale
 {
     \setcounter{task}{0}
     \setcounter{resa}{0}
@@ -113,21 +138,27 @@
         \pgfmathparse{\ordmachine - (0.5*\RowHeight)} \let\ordlabel\pgfmathresult
 
         \ifthenelse{\equal{\y}{1}}
-        {\node[left] at (0, \ordlabel) {$M_{#6}$};}
+        {\node[left] at (0, \ordlabel) {${\ArgI}_{#6}$};}
         {
             \pgfmathparse{int(\y - 1)} \let\ylabel\pgfmathresult
             % TODO Tester s'il s'agit d'un entier
             \IfDecimal{#6}
             {
                 \pgfmathparse{int(#6 + \ylabel)} \let\ysuplabel\pgfmathresult
-                \node[left] at (0, \ordlabel) {$M_{\ysuplabel}$};
+                \node[left] at (0, \ordlabel) {${\ArgI}_{\ysuplabel}$};
             }
-            {\node[left] at (0, \ordlabel) {$M_{#6 + \ylabel}$};}
+            {\node[left] at (0, \ordlabel) {${\ArgI}_{#6 + \ylabel}$};}
         }
         \draw[dotted] (0, \ordmachine) to (\EndX + \DashLength, \ordmachine);
     }
 }
-{\end{tikzpicture}}
+{
+    \end{tikzpicture}
+    \renewcommand{\ArgI}{M}
+    \toggleonabs
+    \toggleoffcontour
+    \toggleoffinfmach
+}
 % >>>
 % <<< k machines k non fixé
 %\newenvironmentx{ordo}[7][1=12, 5=a, 6=0, 7=0]
