@@ -1,6 +1,25 @@
 \ProvidesPackage{scheduling}
 \RequirePackage{tikz}
 \RequirePackage{xargs}
+\RequirePackage{ifthen}
+
+\DeclareOptionX{tasknot}{%
+    \def\TaskNotOpt{#1}%
+}
+
+\DeclareOptionX{resanot}{%
+    \def\ResaNotOpt{#1}%
+}
+
+\DeclareOptionX{dashedpercent}{%
+    \def\DashedPercentOpt{#1}%
+}
+
+\ExecuteOptionsX{tasknot=T}
+\ExecuteOptionsX{resanot=R}
+\ExecuteOptionsX{dashedpercent=0.05}
+
+\ProcessOptionsX
 
 \newcounter{task}
 \newcounter{resa}
@@ -10,12 +29,12 @@
 \newcommand{\tlabel}{nolabel}
 
 % <<< Nombre fixé de machines (initialisation des abscisses à 0)
-\newenvironmentx{ordo}[9][1=12, 5=a, 6=0, 7=0, 8=1, 9=n, usedefault]
+\newenvironmentx{ordo}[9][1=12, 5=1, 6=0, 7=0, 8=1, 9=n, usedefault]
 % 1 : Longueur Max en cm
 % 2 : Nbre de machines
 % 3 : Pas en abscisse
 % 4 : xmax
-% 5 : Largeur Max
+% 5 : Hauteur d'une ligne
 % 6 : Début de la numérotation des machines
 % 7 : Début de la numérotation en abscisse
 {
@@ -23,60 +42,75 @@
     \setcounter{resa}{0}
     \setcounter{hole}{0}
     \setcounter{phase}{0}
+
     \begin{tikzpicture}[>=latex,every node/.style={transform shape}, scale=#8]
  
     % Si la taille de l'ordo est fixée alors on calcule l'épaisseur d'une ligne, sinon on la
     % fixe à 1
-    \ifthenelse{\equal{#5}{a}}
-    {\pgfmathparse{1} \let\height\pgfmathresult}
-    {\pgfmathparse{#5/#2} \let\height\pgfmathresult}
+    \pgfmathparse{#5} \let\RowHeight\pgfmathresult
+    % Nombre de machines
+    \pgfmathparse{#2} \let\NbMachines\pgfmathresult
+    % Début de numérotation
+    \IfDecimal{#7}{\pgfmathparse{#7} \let\FirstNum\pgfmathresult}{\pgfmathparse{0} \let\FirstNum\pgfmathresult}
 
     \ifthenelse{\equal{#9}{n}}
-    {\pgfmathparse{0} \let\contour\pgfmathresult}
-    {\pgfmathparse{1} \let\contour\pgfmathresult}
- 
-    % Calcul de la longueur d'un pas en abscisse
-    \pgfmathparse{#3/(#4) * (#1-1)} \let\xpas\pgfmathresult
-    % Calcul du nombre de pas nécessaires pour dépasser la borne
-    \pgfmathparse{int((#4 - 1)/#3) + 1} \let\nbpas\pgfmathresult
-    % Longueur d'un pas unitaire
-    \pgfmathparse{\xpas/#3} \let\unitxpas\pgfmathresult
+    {\def\contour{0}}
+    {\def\contour{1}}
 
-    % Calcul de l'abcisse maximale
-    \pgfmathparse{#1-\xpas} \let\begx\pgfmathresult
-    % Calcul de l'ordonnée maximale
-    \pgfmathparse{#2*\height} \let\endy\pgfmathresult
-    
-    \draw[thick] (\begx,0) -- (0,0) -- (0,\endy) -- (\begx,\endy);
-    \draw[thick,dashed] (\begx,0) -- (\begx+\xpas,0);
-    \draw[thick,dashed] (\begx,\endy) -- (\begx+\xpas,\endy);
+    % Calcul de la longueur d'un pointillé
+    \pgfmathparse{#1 * \DashedPercentOpt} \let\DashLength\pgfmathresult
 
-    \draw[thick,dashed] (0,0) -- (0-\xpas,0);
-    \draw[thick,dashed] (0,\endy) -- (0-\xpas,\endy);
+    % Calcul de la largeur utile (largeur de l'image demandées - 10% pour les pointillés)
+    \pgfmathparse{#1 - 2 * \DashLength} \let\RealPictLength\pgfmathresult
 
-    \node[below] at (0, 0) {$#7$};
+    % Calcul de la longueur d'une unité
+    \pgfmathparse{\RealPictLength / #4} \let\UnitXLength\pgfmathresult
 
-    \foreach \x in {1,...,\nbpas}{
-        \pgfmathparse{\x * \xpas} \let\abscisse\pgfmathresult
+    % Calcul de la longueur d'un pas
+    \pgfmathparse{\UnitXLength * #3} \let\StepLength\pgfmathresult
+
+    % Calcul du nombre de pas
+    \pgfmathparse{int(#4/#3)} \let\NbSteps\pgfmathresult
+
+    % Abscisse réelle de la fin du diagramme
+    \let\EndX\RealPictLength
+
+    % Ordonnée de la ligne haute de l'instance
+    \pgfmathparse{#2*\RowHeight} \let\EndY\pgfmathresult
+
+    % Largeur des événements (phases, jobs, réservations, \ldots)
+    \pgfmathparse{0.8 * \RowHeight} \let\EventWidth\pgfmathresult
+
+    \draw[thick] (\EndX,0) -- (0,0) -- (0,\EndY) -- (\EndX,\EndY);
+    \draw[thick,dashed] (\EndX,0) -- (\EndX+\DashLength,0);
+    \draw[thick,dashed] (\EndX,\EndY) -- (\EndX+\DashLength,\EndY);
+
+    \draw[thick,dashed] (0,0) -- (0-\DashLength,0);
+    \draw[thick,dashed] (0,\EndY) -- (0-\DashLength,\EndY);
+
+    \node[below] at (0, 0) {{\scriptsize$#7$}};
+
+    \foreach \x in {1,...,\NbSteps}{
+        \pgfmathparse{\x * \StepLength} \let\abscisse\pgfmathresult
         \pgfmathparse{int(\x * #3)} \let\xlabel\pgfmathresult
 
         % TODO Faire le test est un nombre
         \IfDecimal{#7}
         {
             \pgfmathparse{int(\xlabel + #7)} \let\supxlab\pgfmathresult
-            \node[below] at (\abscisse, 0) {$\supxlab$};
+            \node[below] at (\abscisse, 0) {{\scriptsize$\supxlab$}};
         }
-        {\node[below] at (\abscisse, 0) {$#7 + \xlabel$};}
+        {\node[below] at (\abscisse, 0) {{\scriptsize$#7 + \xlabel$}};}
 
-        \draw[dotted] (\abscisse,0) to (\abscisse,\endy);
+        \draw[dotted] (\abscisse,0) to (\abscisse,\EndY);
     }
 
-    \pgfmathparse{(\nbpas + 0.7) * \xpas} \let\abscisse\pgfmathresult
-    \node[above] at (\abscisse, -0.4) {$\dots$};
+    %\pgfmathparse{(\nbpas + 0.7) * \xpas} \let\abscisse\pgfmathresult
+    %\node[above] at (\abscisse, -0.4) {$\dots$};
 
     \foreach \y in {1,...,#2}{
-        \pgfmathparse{\y * \height} \let\ordmachine\pgfmathresult
-        \pgfmathparse{\ordmachine - (0.5*\height)} \let\ordlabel\pgfmathresult
+        \pgfmathparse{\y * \RowHeight} \let\ordmachine\pgfmathresult
+        \pgfmathparse{\ordmachine - (0.5*\RowHeight)} \let\ordlabel\pgfmathresult
 
         \ifthenelse{\equal{\y}{1}}
         {\node[left] at (0, \ordlabel) {$M_{#6}$};}
@@ -90,7 +124,7 @@
             }
             {\node[left] at (0, \ordlabel) {$M_{#6 + \ylabel}$};}
         }
-        \draw[dotted] (0, \ordmachine) to (\begx + \xpas, \ordmachine);
+        \draw[dotted] (0, \ordmachine) to (\EndX + \DashLength, \ordmachine);
     }
 }
 {\end{tikzpicture}}
@@ -104,7 +138,7 @@
 % 5 : Largeur Max
 % 6 : Début de la numérotation des machines
 % 7 : Début de la numérotation en abscisse
-\newenvironmentx{ordok}[7][1=12, 5=a, 6=0, 7=0]
+\newenvironmentx{ordok}[7][1=12, 5=1, 6=0, 7=0]
 % 1 : Max
 % 2 : Nbre de machines avant ...
 % 3 : Pas en abscisse
@@ -117,50 +151,67 @@
     \setcounter{phase}{0}
     \begin{center}
     \begin{tikzpicture}[>=latex]
-        \ifthenelse{\equal{#5}{a}}
-        {\pgfmathparse{1} \let\height\pgfmathresult}
-        {\pgfmathparse{#5/#2} \let\height\pgfmathresult}
+        \def\RowHeight{#5}
  
-        \pgfmathparse{#3/(#4) * (#1-1)} \let\xpas\pgfmathresult
-        \pgfmathparse{int((#4 - 1)/#3) + 1} \let\nbpas\pgfmathresult
-        \pgfmathparse{\xpas/#3} \let\unitxpas\pgfmathresult
-        
-        \pgfmathparse{#1-\xpas} \let\begx\pgfmathresult
-        \pgfmathparse{#2*\height} \let\machheight\pgfmathresult
-        \pgfmathparse{\machheight + 2*\height} \let\endy\pgfmathresult
+        % Calcul de la longueur d'un pointillé
+        \pgfmathparse{#1 * \DashedPercentOpt} \let\DashLength\pgfmathresult
 
-        \draw[thick] (\begx+\xpas,0) -- (0,0) -- (0,\endy) -- (\begx+\xpas,\endy);
-        \draw[thick,dashed] (\begx,0) -- (\begx+\xpas,0);
-        \draw[thick,dashed] (\begx,\endy) -- (\begx+\xpas,\endy);
+        % Calcul de la largeur utile (largeur de l'image demandées - 10% pour les pointillés)
+        \pgfmathparse{#1 - 2 * \DashLength} \let\RealPictLength\pgfmathresult
 
-        \node[below] at (0, 0) {$0$};
+        % Calcul de la longueur d'une unité
+        \pgfmathparse{\RealPictLength / #4} \let\UnitXLength\pgfmathresult
 
-        \foreach \x in {1,...,\nbpas}{
-            \pgfmathparse{\x * \xpas} \let\abscisse\pgfmathresult
+        % Calcul de la longueur d'un pas
+        \pgfmathparse{\UnitXLength * #3} \let\StepLength\pgfmathresult
+
+        % Calcul du nombre de pas
+        \pgfmathparse{int(#4/#3)} \let\NbSteps\pgfmathresult
+
+        % Abscisse réelle de la fin du diagramme
+        \let\EndX\RealPictLength
+
+        % Largeur du jeu de machines
+        \pgfmathparse{#2 *\RowHeight} \let\MachineHeight\pgfmathresult
+
+        % Ordonnée de la ligne haute de l'instance
+        \pgfmathparse{(#2 + 2)*\RowHeight} \let\EndY\pgfmathresult
+
+        \draw[thick] (\EndX,0) -- (0,0) -- (0,\EndY) -- (\EndX,\EndY);
+        \draw[thick,dashed] (\EndX,0) -- (\EndX+\DashLength,0);
+        \draw[thick,dashed] (\EndX,\EndY) -- (\EndX+\DashLength,\EndY);
+
+        \draw[thick,dashed] (0,0) -- (0-\DashLength,0);
+        \draw[thick,dashed] (0,\EndY) -- (0-\DashLength,\EndY);
+
+        \node[below] at (0, 0) {$#7$};
+
+        \foreach \x in {1,...,\NbSteps}{
+            \pgfmathparse{\x * \StepLength} \let\abscisse\pgfmathresult
             \pgfmathparse{int(\x * #3)} \let\xlabel\pgfmathresult
 
             \node[below] at (\abscisse, 0) {$\xlabel$};
-            \draw[dotted] (\abscisse,0) to (\abscisse,\machheight);
-            \draw[dotted] (\abscisse,\machheight+1) to (\abscisse,\endy);
+            \draw[dotted] (\abscisse,0) to (\abscisse,\MachineHeight);
+            \draw[dotted] (\abscisse,\MachineHeight+1) to (\abscisse,\EndY);
         }
 
-        \pgfmathparse{(\nbpas + 0.7) * \xpas} \let\abscisse\pgfmathresult
-        \node[above] at (\abscisse, -0.4) {$\dots$};
+        %\pgfmathparse{(\nbpas + 0.7) * \xpas} \let\abscisse\pgfmathresult
+        %\node[above] at (\abscisse, -0.4) {$\dots$};
 
         \foreach \y in {1,...,#2}{
-            \pgfmathparse{\y * \height} \let\ordmachine\pgfmathresult
-            \pgfmathparse{\ordmachine - (0.5*\height)} \let\ordlabel\pgfmathresult
+            \pgfmathparse{\y * \RowHeight} \let\ordmachine\pgfmathresult
+            \pgfmathparse{\ordmachine - (0.5*\RowHeight)} \let\ordlabel\pgfmathresult
 
             \node[left] at (0, \ordlabel) {$M_\y$};
-            \draw[dotted] (0, \ordmachine) to (\begx + \xpas, \ordmachine);
+            \draw[dotted] (0, \ordmachine) to (\EndX + \DashLength, \ordmachine);
         }
 
-        \pgfmathparse{\height*0.6}\let\temporaryvariable\pgfmathresult
-        \node[left] at (0, \machheight + \temporaryvariable) {$\vdots$};
-        \pgfmathparse{\endy - 0.5*\height}\let\temporaryvariable\pgfmathresult
+        \pgfmathparse{\RowHeight*0.6}\let\temporaryvariable\pgfmathresult
+        \node[left] at (0, \MachineHeight + \temporaryvariable) {$\vdots$};
+        \pgfmathparse{\EndY - 0.5*\RowHeight}\let\temporaryvariable\pgfmathresult
         \node[left] at (0, \temporaryvariable) {$k$};
-        \pgfmathparse{\endy - \height}\let\temporaryvariable\pgfmathresult
-        \draw[dotted]  (0, \temporaryvariable) to (\begx+\xpas, #2 + 1);
+        \pgfmathparse{\EndY - \RowHeight}\let\temporaryvariable\pgfmathresult
+        \draw[dotted]  (0, \temporaryvariable) to (\EndX+\StepLength, #2 + 1);
 }
 {\end{tikzpicture}\end{center}}
 % >>>
@@ -177,15 +228,14 @@
     \renewcommand{\tlabel}{$\iephase{\thephase}$}}
     {\renewcommand{\tlabel}{#1}}
 
-    \pgfmathparse{#4*\unitxpas} \let\initx\pgfmathresult
-    \pgfmathparse{(#3*\height)-(0.9*\height)}       \let\inity\pgfmathresult
-    \pgfmathparse{#2*\unitxpas} \let\longx\pgfmathresult
-    \pgfmathparse{\height*0.8}  \let\largy\pgfmathresult
+    \pgfmathparse{(#4 - \FirstNum)*\UnitXLength} \let\InitX\pgfmathresult
+    \pgfmathparse{(#3*\RowHeight)-(0.9*\RowHeight)}       \let\InitY\pgfmathresult
+    \pgfmathparse{#2*\StepLength} \let\PhaseLength\pgfmathresult
 
-    %\fill[black!30] (\initx, \inity) rectangle +(\longx, \largy);
-    \draw[-, dashed] (\initx, 0) to (\initx, \inity + \largy);
-    \draw[-, dashed] (\initx + \longx, 0) to (\initx + \longx, \inity + \largy);
-    \node at (\initx + \longx/2, \inity + \largy/2) {\tlabel};
+    %\fill[black!30] (\initx, \InitY) rectangle +(\longx, \EventWidth);
+    \draw[-, dashed] (\InitX, 0) to (\InitX, \InitY + \EventWidth);
+    \draw[-, dashed] (\InitX + \PhaseLength, 0) to (\InitX + \PhaseLength, \InitY + \EventWidth);
+    \node at (\InitX + \PhaseLength/2, \InitY + \EventWidth/2) {{\scriptsize\tlabel}};
 }
 % >>>
 % <<< \newtask[label]{duree}{machine}{début}
@@ -199,19 +249,43 @@
     
     \ifthenelse{\equal{#1}{n}}
     {\addtocounter{task}{1}
-    \renewcommand{\tlabel}{$T_{\thetask}$}}
+    \renewcommand{\tlabel}{$\TaskNotOpt_{\thetask}$}}
     {\renewcommand{\tlabel}{#1}}
 
-    \pgfmathparse{#4*\unitxpas} \let\initx\pgfmathresult
-    \pgfmathparse{(#3*\height)-(0.9*\height)}       \let\inity\pgfmathresult
-    \pgfmathparse{#2*\unitxpas} \let\longx\pgfmathresult
-    \pgfmathparse{\height*0.8}  \let\largy\pgfmathresult
+    \pgfmathparse{(#4 - \FirstNum)*\UnitXLength} \let\InitX\pgfmathresult
+    \pgfmathparse{(#3*\RowHeight)-(0.9*\RowHeight)}       \let\InitY\pgfmathresult
+    \pgfmathparse{#2*\UnitXLength} \let\JobLength\pgfmathresult
 
-    \fill[#5] (\initx, \inity) rectangle +(\longx, \largy);
+    \fill[#5] (\InitX, \InitY) rectangle +(\JobLength, \EventWidth);
     \ifthenelse{\equal{\contour}{1}}{
-        \draw[#6] (\initx, \inity) rectangle +(\longx, \largy);
+        \draw[#6] (\InitX, \InitY) rectangle +(\JobLength, \EventWidth);
     }{}
-    \node[#6] at (\initx + \longx/2, \inity + \largy/2) {\tlabel};
+    \node[#6] at (\InitX + \JobLength/2, \InitY + \EventWidth/2) {{\scriptsize\tlabel}};
+}
+% >>>
+% <<< \newunschedtask[label]{duree}{début}[ligne][bgcolor][fgcolor]
+\newcommandx{\newunschedtask}[6][1=n, 4=1, 5=black!30, 6=black, usedefault]{
+    % 1 : Label de la tâche
+    % 2 : Durée de la tâche
+    % 3 : Date de début
+    % 4 : N° de ligne au dessus de la grille
+    % 5 : Couleur de fond
+    % 6 : Couleur de police
+    
+    \ifthenelse{\equal{#1}{n}}
+    {\addtocounter{task}{1}
+    \renewcommand{\tlabel}{$\TaskNotOpt_{\thetask}$}}
+    {\renewcommand{\tlabel}{#1}}
+
+    \pgfmathparse{(#3 - \FirstNum)*\UnitXLength} \let\InitX\pgfmathresult
+    \pgfmathparse{(#4 + \NbMachines - 0.9) * \RowHeight}       \let\InitY\pgfmathresult
+    \pgfmathparse{#2*\UnitXLength} \let\JobLength\pgfmathresult
+
+    \fill[#5] (\InitX, \InitY) rectangle +(\JobLength, \EventWidth);
+    \ifthenelse{\equal{\contour}{1}}{
+        \draw[#6] (\InitX, \InitY) rectangle +(\JobLength, \EventWidth);
+    }{}
+    \node[#6] at (\InitX + \JobLength/2, \InitY + \EventWidth/2) {{\scriptsize\tlabel}};
 }
 % >>>
 % <<< \newhyptask[label]{duree}{machine}{début}
@@ -221,27 +295,61 @@
     % 2 : Numéro de machine
     % 3 : Date de début
     
-    \pgfmathparse{#3*\unitxpas} \let\initx\pgfmathresult
-    \pgfmathparse{(#2-0.9)*\height)}       \let\inity\pgfmathresult
-    \pgfmathparse{#1*\unitxpas} \let\longx\pgfmathresult
-    \pgfmathparse{\height*0.8}  \let\largy\pgfmathresult
+    \pgfmathparse{(#3 - \FirstNum)*\UnitXLength} \let\InitX\pgfmathresult
+    \pgfmathparse{(#2-0.9)*\RowHeight}       \let\InitY\pgfmathresult
+    \pgfmathparse{#1*\UnitXLength} \let\HypTaskLength\pgfmathresult
 
-    \draw[dashed] (\initx, \inity) rectangle +(\longx, \largy);
+    \draw[dashed] (\InitX, \InitY) rectangle +(\HypTaskLength, \EventWidth);
 }
 % >>>
-% <<< \newunlabeledresa{duree}{machine}{debut}
-%\newcommand{\newresa}[3]{
-%    % 1 : Durée de la réservation
-%    % 2 : Numéro de machine
-%    % 3 : Date de début
-%    \pgfmathparse{#3*\unitxpas} \let\initx\pgfmathresult
-%    \pgfmathparse{#2-0.9}       \let\inity\pgfmathresult
-%    \pgfmathparse{#1*\unitxpas} \let\longx\pgfmathresult
-    %\pgfmathparse{\height*0.8}  \let\largy\pgfmathresult
-%
-%    \fill[black] (\initx, \inity) rectangle +(\longx, \largy);
-%}
-%% >>>
+% <<< \newunschedjob[label]{duree}{release}{deadline}{upline}[bgcolor][fgcolor]
+\newcommandx{\newunschedjob}[7][1=n,6=black!30, 7=black, usedefault]{
+    % 1 : Label
+    % 2 : Processing time
+    % 3 : Release Date
+    % 4 : Deadline
+    % 5 : Position above the machines
+    % 6 : Background color
+    % 7 : Foreground color
+
+    % Label
+    \ifthenelse{\equal{#1}{n}}
+    {\addtocounter{task}{1}
+    \renewcommand{\tlabel}{$\TaskNotOpt_{\thetask}$}}
+    {\renewcommand{\tlabel}{#1}}
+
+    % Real Deadline (la deadline est le dernier créneau auquel on peut schéduler la tâche => le
+    % créneau doit être couvert d'où le +1)
+    \pgfmathparse{#4 + 1 - \FirstNum} \let\RealDeadLine\pgfmathresult
+
+    % Release Date
+    \pgfmathparse{(#3 - \FirstNum) * \UnitXLength} \let\ReleaseDate\pgfmathresult
+    % Deadline
+    \pgfmathparse{\RealDeadLine * \UnitXLength} \let\DeadLine\pgfmathresult
+    % Processing Time
+    \pgfmathparse{#2 * \UnitXLength} \let\JobLength\pgfmathresult
+
+    % Milieu de la tâche 
+    \pgfmathparse{((#3 - \FirstNum + \RealDeadLine)/2) * \UnitXLength} \let\MiddleRectangle\pgfmathresult
+    % Abscisse des coins gauches de la tâche
+    \pgfmathparse{\MiddleRectangle - (#2 * \UnitXLength / 2)} \let\AbsLeftCorner\pgfmathresult
+    % Abscisse des coins droits de la tâche
+    \pgfmathparse{\MiddleRectangle + (#2 * \UnitXLength / 2)} \let\AbsRightCorner\pgfmathresult
+    % Ordonnée des coins inférieurs de la tâche
+    \pgfmathparse{(#5 + \NbMachines -0.9)*\RowHeight}       \let\OrdDownCorner\pgfmathresult
+    % Ordonnée de la ligne de schedule
+    \pgfmathparse{(#5 + \NbMachines - 0.5)*\RowHeight} \let\OrdLineReleaseDead\pgfmathresult
+
+    \fill[#6] (\AbsLeftCorner, \OrdDownCorner) rectangle +(\JobLength, \EventWidth);
+    \ifthenelse{\equal{\contour}{1}}{
+        \draw[#7] (\AbsLeftCorner, \OrdDownCorner) rectangle +(\JobLength, \EventWidth);
+    }{}
+    \node[#7] at (\MiddleRectangle, \OrdLineReleaseDead) {{\scriptsize\tlabel}};
+
+    \draw[<-, >=latex] (\ReleaseDate, \OrdLineReleaseDead) to (\AbsLeftCorner, \OrdLineReleaseDead);
+    \draw[->, >=latex] (\AbsRightCorner, \OrdLineReleaseDead) to (\DeadLine, \OrdLineReleaseDead);
+}
+%>>>
 % <<< \newresa[label]{duree}{machine}{debut}
 \newcommandx{\newresa}[6][1=n, 5=black, 6=white, usedefault]{
     % 1 : Label de la réservation
@@ -254,36 +362,35 @@
     \renewcommand{\tlabel}{$R_{\theresa}$}}
     {\renewcommand{\tlabel}{#1}}
 
-    \pgfmathparse{#4*\unitxpas} \let\initx\pgfmathresult
-    \pgfmathparse{(#3*\height)-(0.9*\height)}       \let\inity\pgfmathresult
-    \pgfmathparse{#2*\unitxpas} \let\longx\pgfmathresult
-    \pgfmathparse{\height*0.8}  \let\largy\pgfmathresult
+    \pgfmathparse{(#4 - \FirstNum)*\UnitXLength} \let\InitX\pgfmathresult
+    \pgfmathparse{(#3*\RowHeight)-(0.9*\RowHeight)}       \let\InitY\pgfmathresult
+    \pgfmathparse{#2*\UnitXLength} \let\ResaLength\pgfmathresult
 
-    \fill[#5] (\initx, \inity) rectangle +(\longx, \largy);
+    \fill[#5] (\InitX, \InitY) rectangle +(\ResaLength, \EventWidth);
     \ifthenelse{\equal{\contour}{1}}{
-        \draw[#6] (\initx, \inity) rectangle +(\longx, \largy);
+        \draw[#6] (\InitX, \InitY) rectangle +(\ResaLength, \EventWidth);
     }{}
-    \node[#6] at (\initx + \longx/2, \inity + \largy/2) {\tlabel};
+    \node[#6] at (\InitX + \ResaLength/2, \InitY + \EventWidth/2) {{\scriptsize\tlabel}};
 }
 % >>>
 % <<< \newhole[label]{duree}{machine}{debut}
 \newcommand{\newhole}[4][n]{
-    % 1 : Durée du trou
-    % 2 : Numéro de machine
-    % 3 : Date de début
-    % 4 : Label du trou
+    % 1 : Label du trou
+    % 2 : Durée du trou
+    % 3 : Numéro de machine
+    % 4 : Date de début
     
     \ifthenelse{\equal{#1}{n}}
     {\addtocounter{hole}{1}
     \renewcommand{\tlabel}{$H_{\thehole}$}}
     {\renewcommand{\tlabel}{#1}}
 
-    \pgfmathparse{#4*\unitxpas} \let\initx\pgfmathresult
-    \pgfmathparse{(#3*\height)-(0.8*\height)}       \let\inity\pgfmathresult
-    \pgfmathparse{#2*\unitxpas} \let\longx\pgfmathresult
+    \pgfmathparse{#4*\UnitXLength} \let\InitX\pgfmathresult
+    \pgfmathparse{(#3*\RowHeight)-(0.8*\RowHeight)}       \let\InitY\pgfmathresult
+    \pgfmathparse{#2*\UnitXLength} \let\HoleLength\pgfmathresult
 
-    \node at (\initx + \longx/2, \inity + 0.35*\height) {\tlabel};
-    \draw[<->] (\initx, \inity) to (\initx + \longx, \inity);
+    \node at (\InitX + \HoleLength/2, \InitY + 0.35*\RowHeight) {{\scriptsize\tlabel}};
+    \draw[<->] (\InitX, \InitY) to (\InitX + \HoleLength, \InitY);
 }
 % >>>
 % <<< \newbeghole[label]{duree}{machine}
@@ -297,13 +404,13 @@
     \renewcommand{\tlabel}{$H_{\thehole}$}}
     {\renewcommand{\tlabel}{#1}}
 
-    \pgfmathparse{0*\unitxpas} \let\initx\pgfmathresult
-    \pgfmathparse{(#3*\height)-(0.8*\height)}       \let\inity\pgfmathresult
-    \pgfmathparse{#2*\unitxpas} \let\longx\pgfmathresult
+    \pgfmathparse{0*\UnitXLength} \let\InitX\pgfmathresult
+    \pgfmathparse{(#3*\RowHeight)-(0.8*\RowHeight)}       \let\InitY\pgfmathresult
+    \pgfmathparse{#2*\UnitXLength} \let\BegHoleLength\pgfmathresult
 
-    \node at (\initx + \longx/2, \inity + 0.35*\height) {\tlabel};
-    \draw[->] (\initx, \inity) to (\initx + \longx, \inity);
-    \draw[-,dashed] (\initx - 1, \inity) to (\initx, \inity);
+    \node at (\InitX + \BegHoleLength/2, \InitY + 0.35*\RowHeight) {{\scriptsize\tlabel}};
+    \draw[->] (\InitX, \InitY) to (\InitX + \BegHoleLength, \InitY);
+    \draw[-,dashed] (\InitX - 1, \InitY) to (\InitX, \InitY);
 }
 % >>>
 % <<< \newendhole[label]{duree}{machine}{debut}
@@ -318,22 +425,22 @@
     \renewcommand{\tlabel}{$H_{\thehole}$}}
     {\renewcommand{\tlabel}{#1}}
 
-    \pgfmathparse{#4*\unitxpas} \let\initx\pgfmathresult
-    \pgfmathparse{(#3*\height)-(0.8*\height)}       \let\inity\pgfmathresult
-    \pgfmathparse{#2*\unitxpas} \let\longx\pgfmathresult
+    \pgfmathparse{#4*\UnitXLength} \let\InitX\pgfmathresult
+    \pgfmathparse{(#3*\RowHeight)-(0.8*\RowHeight)}       \let\InitY\pgfmathresult
+    \pgfmathparse{#2*\UnitXLength} \let\EndHoleLength\pgfmathresult
 
     
-    \node at (\initx + \longx/2, \inity + 0.35*\height) {\tlabel};
-    \draw[<-] (\initx, \inity) to (\initx + \longx, \inity);
-    \draw[-,dashed] (\initx + \longx, \inity) to (\initx + \longx + 2*\unitxpas, \inity);
+    \node at (\InitX + \EndHoleLength/2, \InitY + 0.35*\RowHeight) {{\scriptsize\tlabel}};
+    \draw[<-] (\InitX, \InitY) to (\InitX + \EndHoleLength, \InitY);
+    \draw[-,dashed] (\InitX + \EndHoleLength, \InitY) to (\InitX + \EndHoleLength + 2*\UnitXLength, \InitY);
 }
 % >>>
 % <<< \adjust{nbmachine}{debmachine}
 \newcommand{\adjust}[2]{
-    \pgfmathparse{(#1-0.2)*\height}       \let\longy\pgfmathresult
-    \pgfmathparse{(#2-0.9)*\height}       \let\inity\pgfmathresult
+    \pgfmathparse{(#1-0.2)*\RowHeight}       \let\longy\pgfmathresult
+    \pgfmathparse{(#2-0.9)*\RowHeight}       \let\InitY\pgfmathresult
 
-    \fill[black!0] (0, \inity) rectangle +(1, \longy);
+    \fill[black!0] (0, \InitY) rectangle +(1, \longy);
 }
 % >>>
 % <<< \newline[color]{time}{label}{height}
@@ -343,12 +450,21 @@
     % 3 : Numéro de machine
     % 4 : Date de début
     
-    \pgfmathparse{#2*\unitxpas} \let\initx\pgfmathresult
-    \pgfmathparse{(#4*\height)}       \let\inity\pgfmathresult
+    \pgfmathparse{#2*\UnitXLength} \let\InitX\pgfmathresult
+    \pgfmathparse{(#4*\RowHeight)}       \let\InitY\pgfmathresult
 
-    %\fill[black!30] (\initx, \inity) rectangle +(\longx, \largy);
-    \draw[-, thick, dashed, #1] (\initx, 0) to (\initx, \inity);
-    \node[#1] at (\initx, \inity + 0.6*\height) {#3};
+    %\fill[black!30] (\InitX, \InitY) rectangle +(\longx, \EventWidth);
+    \draw[-, thick, dashed, #1] (\InitX, 0) to (\InitX, \InitY);
+    \node[#1] at (\InitX, \InitY + 0.6*\RowHeight) {#3};
+}
+
+\newcommandx{\newvertline}[4][4={-,black}, usedefault]{
+    \pgfmathparse{(#2 - #1 + 0.2) * \RowHeight} \let\linelength\pgfmathresult
+    \pgfmathparse{(#2 + 0.1 - 1) * \RowHeight} \let\upbound\pgfmathresult
+    \pgfmathparse{(#1 - 0.1) * \RowHeight} \let\lowbound\pgfmathresult
+    \pgfmathparse{(#3 + 0.5) * \UnitXLength} \let\timeline\pgfmathresult
+
+    \draw[#4] (\timeline, \lowbound) to (\timeline, \upbound);
 }
 % >>>
 
@@ -356,13 +472,13 @@
 % <<< Taches
 %% Début d'une tâche
 \newcommand{\st}[1]{ r_{#1} }
-\newcommand{\ste}[1]{ r^{\mathcal{T}}_{#1} }
+\newcommand{\ste}[1]{ r^{\mathcal{\TaskNotOpt}}_{#1} }
 %% Fin d'une tâche
 \newcommand{\ct}[1]{ d_{#1} }
-\newcommand{\cte}[1]{ d^{\mathcal{T}}_{#1} }
+\newcommand{\cte}[1]{ d^{\mathcal{\TaskNotOpt}}_{#1} }
 %% Durée d'une tâche
 \newcommand{\pt}[1]{ p_{#1} }
-\newcommand{\pte}[1]{ p^{\mathcal{T}}_{#1} }
+\newcommand{\pte}[1]{ p^{\mathcal{\TaskNotOpt}}_{#1} }
 % >>>
 % <<< Resa
 %% Début d'une réservation
